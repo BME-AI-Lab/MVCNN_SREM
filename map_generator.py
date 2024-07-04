@@ -80,7 +80,7 @@ def get_radar_map(files):
     total_distance = distance_per_bin * radars[0].shape[1]  # cm
     bins = radars[0].shape[1]
     data_distances = np.linspace(0, total_distance, bins)
-    generator = MapGenerator2()
+    generator = MapGenerator()
     bed_y = 1.96 * 100
     bed_x = 0.92 * 100
     x_position = [
