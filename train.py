@@ -30,7 +30,7 @@ class MultiViewImageDataset(Dataset):
         self.root_dir = root_dir
         self.num_views = num_views
         self.transform = transform
-        self.labels = pd.read_csv(os.path.join(root_dir, 'labels3.csv'))
+        self.labels = pd.read_csv(os.path.join(root_dir, 'labels.csv'))
         self.instances = self.labels['folder'].values
 
 
