@@ -70,93 +70,9 @@ class MultiViewImageDataset(Dataset):
         
         return views, label
 
-class SingleViewImageDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
-        """
-        Args:
-            root_dir (string): Directory with all the images.
-            num_views (int): Number of views per instance.
-            transform (callable, optional): Optional transform to be applied on a sample.
-        """
-        self.root_dir = root_dir
-        self.transform = transform
-        self.labels = pd.read_csv(os.path.join(root_dir, 'labels3.csv'))
-        self.instances = self.labels['folder'].values
-
-
-    def __len__(self):
-        return len(self.instances)
-
-    def __getitem__(self, idx):
-        instance_name = self.instances[idx]
-        instance_path = os.path.join(self.root_dir, instance_name)
-        
-        # Load each view for the current instance
-        views = [] # Placeholder for the views
-        
-        view_path = os.path.join(instance_path, f'radar_map_combined.npy')  # Adjust naming convention as needed
-        try:
-            view = np.load(view_path)
-        except:
-            print(view_path)
-        view = np.stack([view, view, view], axis=-1)  # Convert to 3-channel image
-        if self.transform:
-            try:
-                view = self.transform(view)
-            except:
-                print(view_path)
-        
-        label = self.labels.loc[self.labels['folder'] == instance_name, 'postures'].values[0]  # Placeholder for actual label loading mechanism
-        
-        return view, label
-    
-class DoubleViewImageDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
-        """
-        Args:
-            root_dir (string): Directory with all the images.
-            num_views (int): Number of views per instance.
-            transform (callable, optional): Optional transform to be applied on a sample.
-        """
-        self.root_dir = root_dir
-        self.transform = transform
-        self.labels = pd.read_csv(os.path.join(root_dir, 'labels3.csv'))
-        self.instances = self.labels['folder'].values
-
-
-    def __len__(self):
-        return len(self.instances)
-
-    def __getitem__(self, idx):
-        instance_name = self.instances[idx]
-        instance_path = os.path.join(self.root_dir, instance_name)
-        
-        # Load each view for the current instance
-        views = [] # Placeholder for the views
-        
-        view_path = os.path.join(instance_path, f'radar_map_combined.npy')  # Adjust naming convention as needed
-        try:
-            view = np.load(view_path)
-        except:
-            print(view_path)
-        view = np.stack([view, view, view], axis=-1)  # Convert to 3-channel image
-        if self.transform:
-            try:
-                view = self.transform(view)
-            except:
-                print(view_path)
-
-        
-        # Assuming labels are stored in a way that they can be loaded here
-        # For simplicity, this example does not handle loading labels
-        label = self.labels.loc[self.labels['folder'] == instance_name, 'postures'].values[0]  # Placeholder for actual label loading mechanism
-        
-        return view, label
-
-
-class SingleViewResNet(nn.Module):
+class SingleViewNet(nn.Module):
     def __init__(self):
-        super(SingleViewResNet, self).__init__()
+        super(SingleViewNet, self).__init__()
         # Load a  model
 
         self.densenet = timm.create_model(
@@ -172,27 +88,12 @@ class SingleViewResNet(nn.Module):
         # Flatten the output
         x = torch.flatten(x, 1)
         return x
-    
-class SingleViewAttentionResNet(nn.Module):
-    def __init__(self):
-        super(SingleViewAttentionResNet, self).__init__()
-        # Load a pre-trained Residual Attention Network model
-        self.residual_attention = ResidualAttentionModel.attention56()
-        # Remove the fully connected layer (classifier)
-        self.residual_attention = nn.Sequential(*(list(self.residual_attention.children())[:-1]))
 
-    def forward(self, x):
-        # Forward pass for a single view through Residual Attention Network
-        x = self.residual_attention(x)
-        # Flatten the output
-        x = torch.flatten(x, 1)
-        return x
-
-class MultiViewResNet(nn.Module):
+class MultiViewNet(nn.Module):
     def __init__(self, num_views, num_classes):
-        super(MultiViewResNet, self).__init__()
+        super(MultiViewNet, self).__init__()
         # Create a module list to hold multiple single-view ResNet networks
-        self.view_networks = nn.ModuleList([SingleViewResNet() for _ in range(num_views)])
+        self.view_networks = nn.ModuleList([SingleViewNet() for _ in range(num_views)])
         
         num_features = 1024
 
@@ -231,7 +132,7 @@ if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model = MultiViewResNet(num_views=8, num_classes=9).to(device)
+    model = MultiViewNet(num_views=8, num_classes=9).to(device)
 
     # Define the loss function
     criterion = nn.CrossEntropyLoss()
